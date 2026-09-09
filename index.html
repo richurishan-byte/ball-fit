@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>BallFit — The most useless measurement your car has ever needed</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#14171d;
+    --bg-2:#0f1116;
+    --panel:#1e2229;
+    --panel-2:#262b34;
+    --stitch:#3a4049;
+    --text:#f2efe9;
+    --text-dim:#98a0ac;
+    --text-dimmer:#656d78;
+    --orange:#ff6a3d;
+    --orange-deep:#e8501f;
+    --yellow:#ffc94a;
+    --green:#59c27c;
+    --red:#ff5c5c;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(circle at 15% 0%, #1a1e26 0%, transparent 45%),
+      radial-gradient(circle at 100% 100%, #191d24 0%, transparent 50%),
+      var(--bg);
+    color:var(--text);
+    font-family:'IBM Plex Mono', ui-monospace, monospace;
+    min-height:100vh;
+    overflow-x:hidden;
+  }
+  .display{font-family:'Big Shoulders Display', sans-serif; font-weight:900; letter-spacing:0.01em;}
+
+  /* faint tread-plate texture on the whole app */
+  .app{
+    position:relative;
+    max-width:560px;
+    margin:0 auto;
+    min-height:100vh;
+    padding:0 0 48px;
+    background-image:
+      repeating-linear-gradient(135deg, rgba(255,255,255,0.012) 0px, rgba(255,255,255,0.012) 2px, transparent 2px, transparent 14px);
+  }
+
+  .topbar{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:18px 20px 0;
+  }
+  .topbar .mark{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-dim);letter-spacing:.04em;}
+  .topbar .dot{width:8px;height:8px;border-radius:50%;background:var(--orange);box-shadow:0 0 8px var(--orange);}
+
+  .screen{ display:none; padding:0 20px; animation:fadein .35s ease; }
+  .screen.active{ display:block; }
+  @keyframes fadein{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);} }
+
+  /* ---------- HOME ---------- */
+  #screen-home{ padding-top:14vh; text-align:center; }
+  .tire-ring{
+    width:120px;height:120px;margin:0 auto 22px;
+    border-radius:50%;
+    background:
+      radial-gradient(circle at 50% 50%, var(--bg-2) 0 30%, #23272f 31% 40%, var(--bg-2) 41% 100%);
+    border:6px solid #2b2f37;
+    position:relative;
+    box-shadow: inset 0 0 0 2px #14171d, 0 12px 30px rgba(0,0,0,.5);
+  }
+  .tire-ring::before{
+    content:"⚽";
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    font-size:44px; filter:grayscale(0) drop-shadow(0 4px 8px rgba(0,0,0,.5));
+  }
+  .logo{
+    font-size:clamp(52px,15vw,76px);
+    line-height:0.9;
+    color:var(--text);
+    margin:0;
+    text-transform:uppercase;
+  }
+  .logo span{color:var(--orange);}
+  .underline{
+    height:6px; width:120px; margin:10px auto 18px;
+    background:repeating-linear-gradient(90deg, var(--yellow) 0 10px, #1a1a1a 10px 20px);
+    border-radius:3px;
+    opacity:.9;
+  }
+  .tagline{
+    color:var(--text-dim);
+    font-size:14px;
+    max-width:320px;
+    margin:0 auto 34px;
+    line-height:1.6;
+  }
+  .btn{
+    font-family:'Big Shoulders Display', sans-serif;
+    font-weight:800;
+    letter-spacing:.03em;
+    text-transform:uppercase;
+    border:none;
+    cursor:pointer;
+    border-radius:10px;
+    transition:transform .12s ease, box-shadow .12s ease, background .15s ease;
+  }
+  .btn:active{ transform:scale(.97); }
+  .btn-primary{
+    background:linear-gradient(180deg, var(--orange) 0%, var(--orange-deep) 100%);
+    color:#1a1204;
+    font-size:22px;
+    padding:16px 42px;
+    box-shadow:0 8px 0 #a8380f, 0 14px 24px rgba(232,80,31,.35);
+  }
+  .btn-primary:active{ box-shadow:0 3px 0 #a8380f; transform:translateY(4px) scale(.99); }
+  .btn-secondary{
+    background:var(--panel-2);
+    color:var(--text);
+    font-size:15px;
+    padding:11px 20px;
+    border:1px solid var(--stitch);
+  }
+  .btn-ghost{
+    background:transparent;
+    color:var(--text-dim);
+    font-size:13px;
+    padding:8px 14px;
+    text-decoration:underline;
+    text-decoration-style:dotted;
+    text-underline-offset:4px;
+  }
+  .home-foot{ margin-top:40px; color:var(--text-dimmer); font-size:11px; letter-spacing:.05em;}
+
+  /* ---------- SHARED: spec panel ---------- */
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--stitch);
+    border-radius:var(--radius);
+    padding:18px;
+    position:relative;
+    margin-bottom:16px;
+  }
+  .panel::before, .panel::after{
+    content:"";
+    position:absolute; top:8px; width:6px; height:6px; border-radius:50%;
+    background:#0d0f13; box-shadow: inset 0 1px 2px rgba(0,0,0,.6);
+  }
+  .panel::before{ left:8px; }
+  .panel::after{ right:8px; }
+  .eyebrow{
+    color:var(--orange);
+    font-size:11px;
+    letter-spacing:.12em;
+    margin:0 0 10px;
+    font-weight:600;
+  }
+  h1.section-title{
+    font-family:'Big Shoulders Display', sans-serif;
+    font-weight:800;
+    font-size:32px;
+    text-transform:uppercase;
+    margin:16px 0 4px;
+  }
+  .sub{ color:var(--text-dim); font-size:13px; margin:0 0 18px; line-height:1.5;}
+
+  input[type="text"]{
+    width:100%;
+    background:var(--bg-2);
+    border:1px solid var(--stitch);
+    color:var(--text);
+    padding:13px 14px;
+    border-radius:10px;
+    font-family:inherit;
+    font-size:15px;
+    outline:none;
+  }
+  input[type="text"]:focus{ border-color:var(--orange); }
+  input[type="text"]::placeholder{ color:var(--text-dimmer); }
+
+  .list{
+    max-height:44vh;
+    overflow-y:auto;
+    margin-top:12px;
+    border-radius:10px;
+  }
+  .row{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:12px 12px;
+    border-bottom:1px dashed var(--stitch);
+    cursor:pointer;
+  }
+  .row:last-child{ border-bottom:none; }
+  .row:hover, .row:active{ background:var(--panel-2); }
+  .row .rname{ font-size:14px; }
+  .row .rname b{ color:var(--text); }
+  .row .rname .brand{ color:var(--text-dim); display:block; font-size:11px; letter-spacing:.04em; text-transform:uppercase;}
+  .row .rvol{ font-weight:600; color:var(--yellow); font-size:13px; white-space:nowrap;}
+  .empty-note{ color:var(--text-dimmer); font-size:13px; padding:16px 4px; text-align:center;}
+
+  .selected-chip{
+    display:flex; align-items:center; justify-content:space-between;
+    background:var(--panel-2);
+    border:1px solid var(--orange);
+    border-radius:10px;
+    padding:12px 14px;
+    margin-top:6px;
+  }
+  .selected-chip .l{ font-size:14px; }
+  .selected-chip .l b{ display:block; font-size:16px; }
+  .selected-chip .r{ color:var(--yellow); font-weight:700; font-size:14px; }
+  .selected-chip button{
+    background:none;border:none;color:var(--text-dimmer);
+    font-size:18px; cursor:pointer; margin-left:10px; line-height:1;
+  }
+
+  .nextbar{ display:flex; justify-content:flex-end; margin-top:18px;}
+
+  /* ---------- BALL GRID ---------- */
+  .ball-grid{
+    display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:12px;
+  }
+  .ball-card{
+    background:var(--bg-2);
+    border:1px solid var(--stitch);
+    border-radius:12px;
+    padding:14px 12px;
+    text-align:left;
+    cursor:pointer;
+    transition:border-color .15s ease, background .15s ease, transform .1s ease;
+  }
+  .ball-card .emo{ font-size:26px; display:block; margin-bottom:6px;}
+  .ball-card .nm{ font-size:13px; font-weight:600; display:block;}
+  .ball-card .dm{ font-size:11px; color:var(--text-dim); }
+  .ball-card:active{ transform:scale(.97); }
+  .ball-card.selected{
+    border-color:var(--yellow);
+    background:linear-gradient(180deg, rgba(255,201,74,.10), transparent);
+    box-shadow:0 0 0 1px var(--yellow) inset;
+  }
+
+  /* ---------- RESULTS ---------- */
+  .plate{
+    background:linear-gradient(180deg, #23262e, #191c22);
+    border:2px solid var(--stitch);
+    border-radius:16px;
+    padding:26px 20px;
+    text-align:center;
+    position:relative;
+    margin-bottom:16px;
+  }
+  .plate .car-label{ font-size:12px; color:var(--text-dim); letter-spacing:.08em; text-transform:uppercase;}
+  .plate .car-name{ font-family:'Big Shoulders Display',sans-serif; font-weight:800; font-size:24px; margin:2px 0 14px;}
+  .odometer{
+    display:inline-flex; gap:4px; background:#0b0c0f; padding:10px 14px; border-radius:8px;
+    border:1px solid #35393f;
+    box-shadow: inset 0 2px 6px rgba(0,0,0,.6);
+    margin-bottom:6px;
+  }
+  .odo-digit{
+    font-family:'Big Shoulders Display', sans-serif;
+    font-weight:900;
+    font-size:clamp(38px, 11vw, 54px);
+    color:var(--yellow);
+    min-width:0.62em;
+    text-align:center;
+    text-shadow:0 0 12px rgba(255,201,74,.35);
+  }
+  .odo-label{ font-size:12px; color:var(--text-dim); letter-spacing:.1em; text-transform:uppercase; margin-top:4px;}
+  .ball-selected-tag{
+    display:inline-flex; align-items:center; gap:6px; margin-top:14px;
+    background:var(--panel-2); border:1px solid var(--stitch); border-radius:20px;
+    padding:6px 14px; font-size:13px;
+  }
+
+  .gauge-wrap{ text-align:center; margin:6px 0 4px; }
+  .gauge-title{ font-size:12px; color:var(--text-dim); letter-spacing:.1em; text-transform:uppercase; margin-bottom:4px;}
+  .gauge-score{ font-family:'Big Shoulders Display',sans-serif; font-weight:800; font-size:20px; margin-top:6px;}
+  .gauge-quip{ color:var(--text-dim); font-size:12.5px; margin-top:2px; max-width:280px; margin-left:auto; margin-right:auto;}
+
+  .details-toggle{
+    width:100%; text-align:left; background:var(--panel); border:1px solid var(--stitch);
+    color:var(--text); border-radius:10px; padding:12px 14px; font-family:inherit; font-size:13px;
+    cursor:pointer; display:flex; justify-content:space-between; align-items:center;
+  }
+  .details-body{
+    display:none; background:var(--bg-2); border:1px dashed var(--stitch); border-top:none;
+    border-radius:0 0 10px 10px; padding:14px; font-size:12.5px; color:var(--text-dim); line-height:1.8;
+    margin-top:-1px;
+  }
+  .details-body.open{ display:block; }
+  .details-body code{ color:var(--yellow); }
+  .details-body .row2{ display:flex; justify-content:space-between; padding:3px 0; border-bottom:1px dotted var(--stitch);}
+  .details-body .row2:last-child{ border-bottom:none; }
+
+  .disclaimer{
+    font-size:11px; color:var(--text-dimmer); text-align:center; margin:16px 0 4px; line-height:1.6;
+  }
+
+  .action-row{ display:flex; gap:10px; margin-top:20px; flex-wrap:wrap; }
+  .action-row .btn{ flex:1; min-width:130px; font-size:13px; padding:12px 10px; }
+
+  /* compare */
+  .compare-list{ margin-top:10px; }
+  .cmp-row{ display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px dashed var(--stitch);}
+  .cmp-row:last-child{ border-bottom:none;}
+  .cmp-emo{ font-size:20px; width:26px; text-align:center;}
+  .cmp-name{ flex:0 0 108px; font-size:12.5px; }
+  .cmp-bar-wrap{ flex:1; background:var(--bg-2); border-radius:6px; overflow:hidden; height:18px; position:relative;}
+  .cmp-bar{ height:100%; background:linear-gradient(90deg, var(--orange), var(--yellow)); width:0%; transition:width .8s cubic-bezier(.22,1,.36,1); }
+  .cmp-count{ flex:0 0 64px; text-align:right; font-weight:700; font-size:13px; color:var(--yellow);}
+
+  .cmp-cars{ display:flex; gap:10px; margin-top:14px; }
+  .cmp-car-slot{ flex:1; background:var(--bg-2); border:1px solid var(--stitch); border-radius:10px; padding:14px 10px; text-align:center;}
+  .cmp-car-slot .nm{ font-size:12px; color:var(--text-dim); margin-bottom:4px;}
+  .cmp-car-slot .val{ font-family:'Big Shoulders Display',sans-serif; font-size:30px; font-weight:800; color:var(--yellow);}
+  .cmp-car-slot .vol{ font-size:11px; color:var(--text-dimmer); margin-top:2px;}
+  .vs{ align-self:center; font-family:'Big Shoulders Display',sans-serif; font-size:16px; color:var(--orange);}
+
+  ::-webkit-scrollbar{ width:6px; }
+  ::-webkit-scrollbar-thumb{ background:var(--stitch); border-radius:3px; }
+
+  .backlink{ display:inline-block; margin-bottom:14px; color:var(--text-dim); font-size:12px; cursor:pointer; text-decoration:none;}
+  .backlink:hover{ color:var(--text); }
+
+  @media (min-width:600px){
+    .app{ padding-top:0; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="topbar">
+    <div class="mark"><span class="dot"></span> BALLFIT SPEC LAB</div>
+    <div class="mark" id="stepIndicator">STEP 0/3</div>
+  </div>
+
+  <!-- HOME -->
+  <section id="screen-home" class="screen active">
+    <div class="tire-ring"></div>
+    <h1 class="logo display">Ball<span>Fit</span></h1>
+    <div class="underline"></div>
+    <p class="tagline">The most useless measurement your car has ever needed.</p>
+    <button class="btn btn-primary" onclick="goTo('car')">Calculate</button>
+    <div class="home-foot">PACKING EFFICIENCY 0.64 · SCIENCE-ADJACENT · 100% USELESS</div>
+  </section>
+
+  <!-- CAR SELECT -->
+  <section id="screen-car" class="screen">
+    <a class="backlink" onclick="goTo('home')">← Start over</a>
+    <div class="panel">
+      <p class="eyebrow">STEP 1 — CHOOSE YOUR VEHICLE</p>
+      <h1 class="section-title display">Find your car</h1>
+      <p class="sub">Search from our spec sheet of 400+ vehicles. We use the manufacturer's cargo volume as the base measurement.</p>
+      <input type="text" id="carSearch" placeholder="Try “Civic”, “Tucson”, “Land Cruiser”…" autocomplete="off">
+      <div class="list" id="carList"></div>
+    </div>
+    <div id="carSelectedWrap"></div>
+    <div class="nextbar">
+      <button class="btn btn-primary" id="carNextBtn" style="display:none;font-size:16px;padding:13px 26px;" onclick="goTo('ball')">Next: pick a ball →</button>
+    </div>
+  </section>
+
+  <!-- BALL SELECT -->
+  <section id="screen-ball" class="screen">
+    <a class="backlink" onclick="goTo('car')">← Change car</a>
+    <div class="panel">
+      <p class="eyebrow">STEP 2 — CHOOSE YOUR PROJECTILE</p>
+      <h1 class="section-title display">Pick a ball</h1>
+      <p class="sub">Every ball is treated as a sphere (rugby ball excepted — it's built different).</p>
+      <div class="ball-grid" id="ballGrid"></div>
+    </div>
+    <div class="nextbar">
+      <button class="btn btn-primary" id="ballNextBtn" style="display:none;font-size:16px;padding:13px 26px;" onclick="calculateAndShow()">See results →</button>
+    </div>
+  </section>
+
+  <!-- RESULTS -->
+  <section id="screen-results" class="screen">
+    <a class="backlink" onclick="goTo('ball')">← Try a different ball</a>
+
+    <div class="plate">
+      <div class="car-label">Estimated capacity of</div>
+      <div class="car-name display" id="resCarName">—</div>
+      <div class="odometer" id="odometer"></div>
+      <div class="odo-label" id="ballCountLabel">BALLS</div>
+      <div class="ball-selected-tag" id="resBallTag"></div>
+    </div>
+
+    <div class="panel gauge-wrap">
+      <div class="gauge-title">Uselessness-O-Meter</div>
+      <svg id="gaugeSvg" width="220" height="120" viewBox="0 0 220 120">
+        <path d="M 15 110 A 95 95 0 0 1 205 110" fill="none" stroke="#2b2f37" stroke-width="14" stroke-linecap="round"/>
+        <path id="gaugeArc" d="M 15 110 A 95 95 0 0 1 205 110" fill="none" stroke="url(#gaugeGrad)" stroke-width="14" stroke-linecap="round" stroke-dasharray="298" stroke-dashoffset="298"/>
+        <defs>
+          <linearGradient id="gaugeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#59c27c"/>
+            <stop offset="55%" stop-color="#ffc94a"/>
+            <stop offset="100%" stop-color="#ff6a3d"/>
+          </linearGradient>
+        </defs>
+        <line id="gaugeNeedle" x1="110" y1="110" x2="110" y2="30" stroke="#f2efe9" stroke-width="3" stroke-linecap="round" style="transform-origin:110px 110px; transition:transform 1s cubic-bezier(.22,1,.36,1);"/>
+        <circle cx="110" cy="110" r="7" fill="#f2efe9"/>
+      </svg>
+      <div class="gauge-score" id="gaugeScore">0 / 100</div>
+      <div class="gauge-quip" id="gaugeQuip">Loading nonsense…</div>
+    </div>
+
+    <button class="details-toggle" onclick="toggleDetails()">
+      <span>📐 Show calculation details</span>
+      <span id="detailsChevron">▾</span>
+    </button>
+    <div class="details-body" id="detailsBody"></div>
+
+    <p class="disclaimer">⚠️ This is a for-fun estimate, not an engineering measurement. Real trunks have shapes, wheel wells, subwoofers, and your cousin's golf bag — actual ball capacity will vary.</p>
+
+    <div class="action-row">
+      <button class="btn btn-secondary" onclick="openCompareBalls()">⚖️ Compare balls</button>
+      <button class="btn btn-secondary" onclick="openCompareCars()">🚗 Compare cars</button>
+    </div>
+    <div class="action-row">
+      <button class="btn btn-ghost" style="flex:1;text-align:center;" onclick="resetApp()">↺ Reset / try again</button>
+    </div>
+  </section>
+
+  <!-- COMPARE BALLS -->
+  <section id="screen-compareballs" class="screen">
+    <a class="backlink" onclick="goTo('results')">← Back to results</a>
+    <div class="panel">
+      <p class="eyebrow">SAME CAR, DIFFERENT AMMO</p>
+      <h1 class="section-title display" id="cmpBallsCarName">—</h1>
+      <p class="sub">Estimated ball count by type, largest to smallest.</p>
+      <div class="compare-list" id="compareBallsList"></div>
+    </div>
+  </section>
+
+  <!-- COMPARE CARS -->
+  <section id="screen-comparecars" class="screen">
+    <a class="backlink" onclick="goTo('results')">← Back to results</a>
+    <div class="panel">
+      <p class="eyebrow">SAME BALL, DIFFERENT TRUNK</p>
+      <h1 class="section-title display">Compare two cars</h1>
+      <p class="sub" id="cmpCarsBallLabel">Using: —</p>
+      <input type="text" id="carSearch2" placeholder="Search for a second car…" autocomplete="off">
+      <div class="list" id="carList2"></div>
+    </div>
+    <div class="panel" id="cmpCarsResultWrap" style="display:none;">
+      <p class="eyebrow">RESULT</p>
+      <div class="cmp-cars">
+        <div class="cmp-car-slot">
+          <div class="nm" id="cmpSlotA_name">—</div>
+          <div class="val" id="cmpSlotA_val">0</div>
+          <div class="vol" id="cmpSlotA_vol">—</div>
+        </div>
+        <div class="vs">VS</div>
+        <div class="cmp-car-slot">
+          <div class="nm" id="cmpSlotB_name">—</div>
+          <div class="val" id="cmpSlotB_val">0</div>
+          <div class="vol" id="cmpSlotB_vol">—</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+/* ======================= DATA ======================= */
+const CARS = [{"brand": "Toyota", "model": "Corolla", "seats": 5, "trunk": 470}, {"brand": "Toyota", "model": "Camry", "seats": 5, "trunk": 493}, {"brand": "Toyota", "model": "Yaris", "seats": 5, "trunk": 286}, {"brand": "Toyota", "model": "Fortuner", "seats": 7, "trunk": 296}, {"brand": "Toyota", "model": "Innova HyCross", "seats": 7, "trunk": 300}, {"brand": "Toyota", "model": "RAV4", "seats": 5, "trunk": 580}, {"brand": "Toyota", "model": "Land Cruiser", "seats": 7, "trunk": 1100}, {"brand": "Toyota", "model": "Hilux", "seats": 5, "trunk": 1000}, {"brand": "Honda", "model": "City", "seats": 5, "trunk": 506}, {"brand": "Honda", "model": "Civic", "seats": 5, "trunk": 428}, {"brand": "Honda", "model": "Accord", "seats": 5, "trunk": 473}, {"brand": "Honda", "model": "CR-V", "seats": 5, "trunk": 590}, {"brand": "Honda", "model": "HR-V", "seats": 5, "trunk": 335}, {"brand": "Honda", "model": "Jazz", "seats": 5, "trunk": 354}, {"brand": "Honda", "model": "WR-V", "seats": 5, "trunk": 363}, {"brand": "Honda", "model": "Amaze", "seats": 5, "trunk": 420}, {"brand": "Hyundai", "model": "i20", "seats": 5, "trunk": 311}, {"brand": "Hyundai", "model": "Grand i10 Nios", "seats": 5, "trunk": 260}, {"brand": "Hyundai", "model": "Venue", "seats": 5, "trunk": 343}, {"brand": "Hyundai", "model": "Creta", "seats": 5, "trunk": 433}, {"brand": "Hyundai", "model": "Alcazar", "seats": 7, "trunk": 180}, {"brand": "Hyundai", "model": "Tucson", "seats": 5, "trunk": 539}, {"brand": "Hyundai", "model": "Verna", "seats": 5, "trunk": 528}, {"brand": "Hyundai", "model": "Exter", "seats": 5, "trunk": 391}, {"brand": "Hyundai", "model": "Kona Electric", "seats": 5, "trunk": 332}, {"brand": "Hyundai", "model": "Ioniq 5", "seats": 5, "trunk": 527}, {"brand": "Hyundai", "model": "Santa Fe", "seats": 5, "trunk": 634}, {"brand": "Hyundai", "model": "Palisade", "seats": 7, "trunk": 509}, {"brand": "Kia", "model": "Sonet", "seats": 5, "trunk": 392}, {"brand": "Kia", "model": "Seltos", "seats": 5, "trunk": 433}, {"brand": "Kia", "model": "Carens", "seats": 7, "trunk": 216}, {"brand": "Kia", "model": "Sportage", "seats": 5, "trunk": 587}, {"brand": "Kia", "model": "EV6", "seats": 5, "trunk": 490}, {"brand": "Kia", "model": "Sorento", "seats": 7, "trunk": 608}, {"brand": "Kia", "model": "Carnival", "seats": 7, "trunk": 627}, {"brand": "Kia", "model": "Telluride", "seats": 7, "trunk": 594}, {"brand": "Maruti Suzuki", "model": "Swift", "seats": 5, "trunk": 265}, {"brand": "Maruti Suzuki", "model": "Baleno", "seats": 5, "trunk": 318}, {"brand": "Maruti Suzuki", "model": "Fronx", "seats": 5, "trunk": 308}, {"brand": "Maruti Suzuki", "model": "Brezza", "seats": 5, "trunk": 328}, {"brand": "Maruti Suzuki", "model": "Grand Vitara", "seats": 5, "trunk": 373}, {"brand": "Maruti Suzuki", "model": "Ertiga", "seats": 7, "trunk": 209}, {"brand": "Maruti Suzuki", "model": "XL6", "seats": 6, "trunk": 209}, {"brand": "Maruti Suzuki", "model": "Ciaz", "seats": 5, "trunk": 510}, {"brand": "Tata", "model": "Tiago", "seats": 5, "trunk": 242}, {"brand": "Tata", "model": "Altroz", "seats": 5, "trunk": 341}, {"brand": "Tata", "model": "Punch", "seats": 5, "trunk": 366}, {"brand": "Tata", "model": "Nexon", "seats": 5, "trunk": 382}, {"brand": "Tata", "model": "Harrier", "seats": 5, "trunk": 425}, {"brand": "Tata", "model": "Safari", "seats": 7, "trunk": 420}, {"brand": "Tata", "model": "Curvv", "seats": 5, "trunk": 500}, {"brand": "Tata", "model": "Tigor", "seats": 5, "trunk": 419}, {"brand": "Mahindra", "model": "Thar", "seats": 4, "trunk": 447}, {"brand": "Mahindra", "model": "XUV 3XO", "seats": 5, "trunk": 364}, {"brand": "Mahindra", "model": "XUV700", "seats": 7, "trunk": 240}, {"brand": "Mahindra", "model": "Scorpio N", "seats": 7, "trunk": 460}, {"brand": "Mahindra", "model": "Scorpio Classic", "seats": 7, "trunk": 460}, {"brand": "Mahindra", "model": "Bolero", "seats": 7, "trunk": 384}, {"brand": "Mahindra", "model": "Marazzo", "seats": 7, "trunk": 190}, {"brand": "Mahindra", "model": "BE 6", "seats": 5, "trunk": 455}, {"brand": "Volkswagen", "model": "Polo", "seats": 5, "trunk": 351}, {"brand": "Volkswagen", "model": "Virtus", "seats": 5, "trunk": 521}, {"brand": "Volkswagen", "model": "Taigun", "seats": 5, "trunk": 385}, {"brand": "Volkswagen", "model": "Tiguan", "seats": 5, "trunk": 615}, {"brand": "Volkswagen", "model": "Golf", "seats": 5, "trunk": 380}, {"brand": "Volkswagen", "model": "Passat", "seats": 5, "trunk": 586}, {"brand": "Volkswagen", "model": "ID.4", "seats": 5, "trunk": 543}, {"brand": "Volkswagen", "model": "Touareg", "seats": 5, "trunk": 810}, {"brand": "Skoda", "model": "Slavia", "seats": 5, "trunk": 521}, {"brand": "Skoda", "model": "Kushaq", "seats": 5, "trunk": 385}, {"brand": "Skoda", "model": "Kodiaq", "seats": 7, "trunk": 835}, {"brand": "Skoda", "model": "Superb", "seats": 5, "trunk": 625}, {"brand": "Skoda", "model": "Octavia", "seats": 5, "trunk": 600}, {"brand": "Skoda", "model": "Fabia", "seats": 5, "trunk": 380}, {"brand": "Renault", "model": "Kwid", "seats": 5, "trunk": 279}, {"brand": "Renault", "model": "Triber", "seats": 7, "trunk": 84}, {"brand": "Renault", "model": "Kiger", "seats": 5, "trunk": 405}, {"brand": "Renault", "model": "Duster", "seats": 5, "trunk": 475}, {"brand": "Renault", "model": "Captur", "seats": 5, "trunk": 404}, {"brand": "Renault", "model": "Megane", "seats": 5, "trunk": 384}, {"brand": "Nissan", "model": "Magnite", "seats": 5, "trunk": 336}, {"brand": "Nissan", "model": "Kicks", "seats": 5, "trunk": 432}, {"brand": "Nissan", "model": "X-Trail", "seats": 7, "trunk": 585}, {"brand": "Nissan", "model": "Qashqai", "seats": 5, "trunk": 504}, {"brand": "Ford", "model": "Figo", "seats": 5, "trunk": 257}, {"brand": "Ford", "model": "EcoSport", "seats": 5, "trunk": 352}, {"brand": "Ford", "model": "Endeavour", "seats": 7, "trunk": 201}, {"brand": "Ford", "model": "Mustang", "seats": 4, "trunk": 408}, {"brand": "Ford", "model": "Explorer", "seats": 7, "trunk": 515}, {"brand": "Ford", "model": "Bronco", "seats": 5, "trunk": 635}, {"brand": "Chevrolet", "model": "Beat", "seats": 5, "trunk": 170}, {"brand": "Chevrolet", "model": "Cruze", "seats": 5, "trunk": 450}, {"brand": "Chevrolet", "model": "Trailblazer", "seats": 7, "trunk": 554}, {"brand": "Chevrolet", "model": "Tahoe", "seats": 8, "trunk": 722}, {"brand": "Chevrolet", "model": "Suburban", "seats": 8, "trunk": 1164}, {"brand": "Jeep", "model": "Compass", "seats": 5, "trunk": 438}, {"brand": "Jeep", "model": "Meridian", "seats": 7, "trunk": 170}, {"brand": "Jeep", "model": "Wrangler", "seats": 5, "trunk": 533}, {"brand": "Jeep", "model": "Grand Cherokee", "seats": 5, "trunk": 1068}, {"brand": "Jeep", "model": "Renegade", "seats": 5, "trunk": 351}, {"brand": "Jeep", "model": "Gladiator", "seats": 5, "trunk": 1000}, {"brand": "BMW", "model": "3 Series", "seats": 5, "trunk": 480}, {"brand": "BMW", "model": "5 Series", "seats": 5, "trunk": 530}, {"brand": "BMW", "model": "7 Series", "seats": 5, "trunk": 540}, {"brand": "BMW", "model": "X1", "seats": 5, "trunk": 476}, {"brand": "BMW", "model": "X3", "seats": 5, "trunk": 550}, {"brand": "BMW", "model": "X5", "seats": 5, "trunk": 650}, {"brand": "BMW", "model": "X7", "seats": 7, "trunk": 750}, {"brand": "Mercedes-Benz", "model": "A-Class", "seats": 5, "trunk": 355}, {"brand": "Mercedes-Benz", "model": "C-Class", "seats": 5, "trunk": 455}, {"brand": "Mercedes-Benz", "model": "E-Class", "seats": 5, "trunk": 540}, {"brand": "Mercedes-Benz", "model": "S-Class", "seats": 5, "trunk": 550}, {"brand": "Mercedes-Benz", "model": "GLA", "seats": 5, "trunk": 435}, {"brand": "Mercedes-Benz", "model": "GLC", "seats": 5, "trunk": 620}, {"brand": "Mercedes-Benz", "model": "GLE", "seats": 5, "trunk": 655}, {"brand": "Mercedes-Benz", "model": "GLS", "seats": 7, "trunk": 470}, {"brand": "Audi", "model": "A3", "seats": 5, "trunk": 425}, {"brand": "Audi", "model": "A4", "seats": 5, "trunk": 460}, {"brand": "Audi", "model": "A6", "seats": 5, "trunk": 530}, {"brand": "Audi", "model": "A8", "seats": 5, "trunk": 505}, {"brand": "Audi", "model": "Q3", "seats": 5, "trunk": 530}, {"brand": "Audi", "model": "Q5", "seats": 5, "trunk": 520}, {"brand": "Audi", "model": "Q7", "seats": 7, "trunk": 865}, {"brand": "Audi", "model": "Q8", "seats": 5, "trunk": 605}, {"brand": "Volvo", "model": "S60", "seats": 5, "trunk": 442}, {"brand": "Volvo", "model": "S90", "seats": 5, "trunk": 500}, {"brand": "Volvo", "model": "XC40", "seats": 5, "trunk": 419}, {"brand": "Volvo", "model": "XC60", "seats": 5, "trunk": 483}, {"brand": "Volvo", "model": "XC90", "seats": 7, "trunk": 640}, {"brand": "Volvo", "model": "V60", "seats": 5, "trunk": 529}, {"brand": "Lexus", "model": "ES", "seats": 5, "trunk": 454}, {"brand": "Lexus", "model": "IS", "seats": 5, "trunk": 480}, {"brand": "Lexus", "model": "NX", "seats": 5, "trunk": 520}, {"brand": "Lexus", "model": "RX", "seats": 5, "trunk": 612}, {"brand": "Lexus", "model": "GX", "seats": 7, "trunk": 623}, {"brand": "Lexus", "model": "LX", "seats": 7, "trunk": 1091}, {"brand": "Tesla", "model": "Model 3", "seats": 5, "trunk": 594}, {"brand": "Tesla", "model": "Model Y", "seats": 5, "trunk": 854}, {"brand": "Tesla", "model": "Model S", "seats": 5, "trunk": 793}, {"brand": "Tesla", "model": "Model X", "seats": 7, "trunk": 2577}, {"brand": "Porsche", "model": "911", "seats": 4, "trunk": 132}, {"brand": "Porsche", "model": "Cayenne", "seats": 5, "trunk": 772}, {"brand": "Porsche", "model": "Macan", "seats": 5, "trunk": 488}, {"brand": "Porsche", "model": "Panamera", "seats": 5, "trunk": 494}, {"brand": "Porsche", "model": "Taycan", "seats": 5, "trunk": 407}, {"brand": "Jaguar", "model": "XE", "seats": 5, "trunk": 410}, {"brand": "Jaguar", "model": "XF", "seats": 5, "trunk": 540}, {"brand": "Jaguar", "model": "F-Pace", "seats": 5, "trunk": 650}, {"brand": "Land Rover", "model": "Range Rover Evoque", "seats": 5, "trunk": 591}, {"brand": "Land Rover", "model": "Discovery Sport", "seats": 7, "trunk": 840}, {"brand": "Land Rover", "model": "Defender 110", "seats": 5, "trunk": 646}, {"brand": "Land Rover", "model": "Range Rover Sport", "seats": 5, "trunk": 780}, {"brand": "Land Rover", "model": "Range Rover", "seats": 5, "trunk": 725}, {"brand": "Maserati", "model": "Ghibli", "seats": 5, "trunk": 500}, {"brand": "Maserati", "model": "Levante", "seats": 5, "trunk": 580}, {"brand": "Ferrari", "model": "Roma", "seats": 4, "trunk": 272}, {"brand": "Ferrari", "model": "Purosangue", "seats": 4, "trunk": 473}, {"brand": "Lamborghini", "model": "Urus", "seats": 5, "trunk": 616}, {"brand": "Lamborghini", "model": "Huracan", "seats": 2, "trunk": 100}, {"brand": "Lamborghini", "model": "Revuelto", "seats": 2, "trunk": 200}, {"brand": "McLaren", "model": "GT", "seats": 2, "trunk": 420}, {"brand": "Aston Martin", "model": "DB12", "seats": 4, "trunk": 320}, {"brand": "Aston Martin", "model": "DBX", "seats": 5, "trunk": 638}, {"brand": "Bentley", "model": "Bentayga", "seats": 5, "trunk": 484}, {"brand": "Rolls-Royce", "model": "Ghost", "seats": 5, "trunk": 507}, {"brand": "Rolls-Royce", "model": "Cullinan", "seats": 5, "trunk": 600}, {"brand": "Mini", "model": "Cooper", "seats": 5, "trunk": 211}, {"brand": "Mini", "model": "Countryman", "seats": 5, "trunk": 450}, {"brand": "Mini", "model": "Clubman", "seats": 5, "trunk": 360}, {"brand": "Suzuki", "model": "Jimny", "seats": 4, "trunk": 211}, {"brand": "Isuzu", "model": "D-Max", "seats": 5, "trunk": 1000}, {"brand": "Isuzu", "model": "MU-X", "seats": 7, "trunk": 235}, {"brand": "MG", "model": "Astor", "seats": 5, "trunk": 448}, {"brand": "MG", "model": "Hector", "seats": 5, "trunk": 587}, {"brand": "MG", "model": "Gloster", "seats": 7, "trunk": 343}, {"brand": "MG", "model": "ZS EV", "seats": 5, "trunk": 448}, {"brand": "Citroen", "model": "C3", "seats": 5, "trunk": 315}, {"brand": "Citroen", "model": "C5 Aircross", "seats": 5, "trunk": 580}, {"brand": "Fiat", "model": "500", "seats": 4, "trunk": 185}, {"brand": "Fiat", "model": "Panda", "seats": 5, "trunk": 225}, {"brand": "Dacia", "model": "Sandero", "seats": 5, "trunk": 328}, {"brand": "Dacia", "model": "Duster", "seats": 5, "trunk": 445}, {"brand": "Subaru", "model": "Forester", "seats": 5, "trunk": 818}, {"brand": "Subaru", "model": "Outback", "seats": 5, "trunk": 920}, {"brand": "Mitsubishi", "model": "Pajero Sport", "seats": 7, "trunk": 131}, {"brand": "Mitsubishi", "model": "Outlander", "seats": 7, "trunk": 478}, {"brand": "Mazda", "model": "CX-5", "seats": 5, "trunk": 522}, {"brand": "Mazda", "model": "Mazda3", "seats": 5, "trunk": 334}, {"brand": "Mazda", "model": "CX-60", "seats": 5, "trunk": 570}, {"brand": "Peugeot", "model": "3008", "seats": 5, "trunk": 520}, {"brand": "Peugeot", "model": "208", "seats": 5, "trunk": 311}, {"brand": "Alfa Romeo", "model": "Giulia", "seats": 5, "trunk": 480}, {"brand": "Alfa Romeo", "model": "Stelvio", "seats": 5, "trunk": 525}, {"brand": "Genesis", "model": "G80", "seats": 5, "trunk": 424}, {"brand": "Genesis", "model": "GV70", "seats": 5, "trunk": 542}, {"brand": "Genesis", "model": "GV80", "seats": 7, "trunk": 735}, {"brand": "Toyota", "model": "Prius", "seats": 5, "trunk": 575}, {"brand": "Nissan", "model": "Patrol", "seats": 7, "trunk": 550}, {"brand": "Hyundai", "model": "Ioniq 6", "seats": 5, "trunk": 401}, {"brand": "BYD", "model": "Atto 3", "seats": 5, "trunk": 440}];
+const BALLS = [{"name": "Football (Soccer)", "emoji": "⚽", "diameter": 22.0, "spherical": true}, {"name": "Basketball", "emoji": "🏀", "diameter": 24.3, "spherical": true}, {"name": "Volleyball", "emoji": "🏐", "diameter": 21.0, "spherical": true}, {"name": "Tennis Ball", "emoji": "🎾", "diameter": 6.7, "spherical": true}, {"name": "Baseball", "emoji": "⚾", "diameter": 7.4, "spherical": true}, {"name": "Softball", "emoji": "🥎", "diameter": 9.7, "spherical": true}, {"name": "Table Tennis Ball", "emoji": "🏓", "diameter": 4.0, "spherical": true}, {"name": "Rugby Ball", "emoji": "🏉", "diameter": 28.0, "spherical": false, "fixedVolumeL": 5.7}];
+const PACKING_EFFICIENCY = 0.64;
+
+/* ======================= STATE ======================= */
+let state = { car: null, ball: null };
+
+/* ======================= HELPERS ======================= */
+function litersToCm3(l){ return l * 1000; }
+
+function ballVolumeLiters(ball){
+  if(ball.spherical === false && typeof ball.fixedVolumeL === 'number'){
+    return ball.fixedVolumeL;
+  }
+  const r_cm = ball.diameter / 2;
+  const volCm3 = (4/3) * Math.PI * Math.pow(r_cm, 3);
+  return volCm3 / 1000;
+}
+
+function estimateCount(carTrunkLiters, ball){
+  const usable = Math.max(0, carTrunkLiters); // tire volume not available in dataset -> treated as 0
+  const bv = ballVolumeLiters(ball);
+  if(!bv || bv <= 0) return 0;
+  const raw = (usable * PACKING_EFFICIENCY) / bv;
+  return Math.max(0, Math.floor(raw));
+}
+
+function uselessnessScore(count, ball, car){
+  let score = 18 + Math.log10(count + 1) * 21;
+  if(ball.diameter < 10) score += 14;         // tiny balls = more chaos = more useless
+  if(car.trunk >= 900) score += 8;            // huge trunk, tiny purpose
+  if(ball.spherical === false) score += 6;    // rugby ball defiance bonus
+  score = Math.min(100, Math.max(4, Math.round(score)));
+  return score;
+}
+
+function uselessnessQuip(score){
+  if(score < 25) return "Almost practical. Suspicious.";
+  if(score < 45) return "A respectable amount of nonsense.";
+  if(score < 65) return "Deeply, proudly unnecessary.";
+  if(score < 85) return "Nobody asked for this. We made it anyway.";
+  return "Peak uselessness achieved. Frame this number.";
+}
+
+function fmtInt(n){ return n.toLocaleString('en-US'); }
+
+/* ======================= NAV ======================= */
+const STEP_MAP = { home:0, car:1, ball:2, results:3, compareballs:3, comparecars:3 };
+function goTo(screen){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+screen).classList.add('active');
+  document.getElementById('stepIndicator').textContent = 'STEP ' + STEP_MAP[screen] + '/3';
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+function resetApp(){
+  state = { car:null, ball:null };
+  document.getElementById('carSearch').value = '';
+  document.getElementById('carSelectedWrap').innerHTML = '';
+  document.getElementById('carNextBtn').style.display = 'none';
+  document.getElementById('ballNextBtn').style.display = 'none';
+  renderCarList('');
+  renderBallGrid();
+  goTo('home');
+}
+
+/* ======================= CAR SELECT ======================= */
+function renderCarList(query, targetListId){
+  targetListId = targetListId || 'carList';
+  const listEl = document.getElementById(targetListId);
+  const q = (query||'').trim().toLowerCase();
+  let results;
+  if(q === ''){
+    results = CARS.slice(0, 25);
+  } else {
+    results = CARS.filter(c => (c.brand + ' ' + c.model).toLowerCase().includes(q)).slice(0, 40);
+  }
+  if(results.length === 0){
+    listEl.innerHTML = '<div class="empty-note">No cars match that search. Try a brand name like “Toyota” or “Tata”.</div>';
+    return;
+  }
+  listEl.innerHTML = results.map((c, i) => {
+    const idx = CARS.indexOf(c);
+    return `<div class="row" onclick="selectCar(${idx}, '${targetListId}')">
+      <div class="rname"><span class="brand">${c.brand}</span><b>${c.model}</b></div>
+      <div class="rvol">${c.trunk} L</div>
+    </div>`;
+  }).join('');
+}
+
+function selectCar(idx, fromList){
+  const car = CARS[idx];
+  if(fromList === 'carList2'){
+    selectSecondCar(car);
+    return;
+  }
+  state.car = car;
+  document.getElementById('carSelectedWrap').innerHTML = `
+    <div class="selected-chip">
+      <div class="l"><b>${car.brand} ${car.model}</b>${car.seats}-seater</div>
+      <div style="display:flex;align-items:center;">
+        <div class="r">${car.trunk} L</div>
+        <button onclick="event.stopPropagation(); clearCar()" title="Remove">✕</button>
+      </div>
+    </div>`;
+  document.getElementById('carNextBtn').style.display = 'inline-block';
+}
+
+function clearCar(){
+  state.car = null;
+  document.getElementById('carSelectedWrap').innerHTML = '';
+  document.getElementById('carNextBtn').style.display = 'none';
+}
+
+document.getElementById('carSearch').addEventListener('input', (e)=> renderCarList(e.target.value, 'carList'));
+
+/* ======================= BALL SELECT ======================= */
+function renderBallGrid(){
+  const grid = document.getElementById('ballGrid');
+  grid.innerHTML = BALLS.map((b, i) => `
+    <button type="button" class="ball-card${state.ball===b?' selected':''}" onclick="selectBall(${i})">
+      <span class="emo">${b.emoji}</span>
+      <span class="nm">${b.name}</span>
+      <span class="dm">⌀ ${b.diameter} cm</span>
+    </button>
+  `).join('');
+}
+
+function selectBall(i){
+  state.ball = BALLS[i];
+  renderBallGrid();
+  document.getElementById('ballNextBtn').style.display = 'inline-block';
+}
+
+/* ======================= RESULTS ======================= */
+function toggleDetails(){
+  const body = document.getElementById('detailsBody');
+  const chev = document.getElementById('detailsChevron');
+  body.classList.toggle('open');
+  chev.textContent = body.classList.contains('open') ? '▴' : '▾';
+}
+
+function animateOdometer(target){
+  const odo = document.getElementById('odometer');
+  const duration = 1100;
+  const start = performance.now();
+  const digits = String(target).length;
+  function frame(now){
+    const t = Math.min(1, (now - start) / duration);
+    const eased = 1 - Math.pow(1 - t, 3);
+    const current = Math.floor(eased * target);
+    const str = String(current).padStart(digits, '0');
+    odo.innerHTML = str.split('').map(d => `<span class="odo-digit">${d}</span>`).join('');
+    if(t < 1) requestAnimationFrame(frame);
+    else odo.innerHTML = String(target).split('').map(d => `<span class="odo-digit">${d}</span>`).join('');
+  }
+  requestAnimationFrame(frame);
+}
+
+function animateGauge(score){
+  const arc = document.getElementById('gaugeArc');
+  const needle = document.getElementById('gaugeNeedle');
+  const circumference = 298;
+  const offset = circumference - (circumference * score / 100);
+  setTimeout(()=>{
+    arc.style.transition = 'stroke-dashoffset 1s cubic-bezier(.22,1,.36,1)';
+    arc.style.strokeDashoffset = offset;
+    const angle = -90 + (score/100)*180;
+    needle.style.transform = `rotate(${angle}deg)`;
+  }, 60);
+  document.getElementById('gaugeScore').textContent = score + ' / 100';
+  document.getElementById('gaugeQuip').textContent = uselessnessQuip(score);
+}
+
+function calculateAndShow(){
+  if(!state.car || !state.ball) return;
+  const car = state.car, ball = state.ball;
+  const count = estimateCount(car.trunk, ball);
+  const score = uselessnessScore(count, ball, car);
+
+  document.getElementById('resCarName').textContent = `${car.brand} ${car.model}`;
+  document.getElementById('ballCountLabel').textContent = ball.name.toUpperCase() + (count === 1 ? '' : 'S') + ' THAT FIT';
+  document.getElementById('resBallTag').innerHTML = `${ball.emoji} ${ball.name} · ⌀ ${ball.diameter} cm`;
+
+  animateOdometer(count);
+  animateGauge(score);
+
+  const bv = ballVolumeLiters(ball);
+  const formulaNote = ball.spherical === false
+    ? `Rugby balls aren't spheres, so we use a fixed reference volume of ${ball.fixedVolumeL} L instead of the sphere formula.`
+    : `Volume = (4/3) × π × (⌀/2)³, converted from cm³ to litres.`;
+
+  document.getElementById('detailsBody').innerHTML = `
+    <div class="row2"><span>Boot / storage volume (dataset)</span><span><code>${car.trunk} L</code></span></div>
+    <div class="row2"><span>Passenger cabin volume</span><span><code>not in dataset → 0 L</code></span></div>
+    <div class="row2"><span>Usable space</span><span><code>${car.trunk} L</code></span></div>
+    <div class="row2"><span>Ball diameter</span><span><code>${ball.diameter} cm</code></span></div>
+    <div class="row2"><span>Single ball volume</span><span><code>${bv.toFixed(3)} L</code></span></div>
+    <div class="row2"><span>Packing efficiency</span><span><code>${PACKING_EFFICIENCY}</code></span></div>
+    <div class="row2"><span>Estimated count</span><span><code>floor(${car.trunk} × ${PACKING_EFFICIENCY} ÷ ${bv.toFixed(3)}) = ${fmtInt(count)}</code></span></div>
+    <div style="margin-top:8px;">${formulaNote} Our dataset only lists the boot/storage volume — the "passenger cabin" is flagged in the source data as needing separate measurement, which isn't available, so usable space here is boot volume alone. Treat the count as a floor estimate: fold the seats down and the real number climbs higher.</div>
+  `;
+  document.getElementById('detailsBody').classList.remove('open');
+  document.getElementById('detailsChevron').textContent = '▾';
+
+  goTo('results');
+}
+
+/* ======================= COMPARE BALLS ======================= */
+function openCompareBalls(){
+  if(!state.car) return;
+  const car = state.car;
+  document.getElementById('cmpBallsCarName').textContent = `${car.brand} ${car.model}`;
+  const rows = BALLS.map(b => ({ ball:b, count: estimateCount(car.trunk, b) }))
+                     .sort((a,b)=> b.count - a.count);
+  const max = rows[0] ? rows[0].count : 1;
+  const listEl = document.getElementById('compareBallsList');
+  listEl.innerHTML = rows.map(r => `
+    <div class="cmp-row">
+      <div class="cmp-emo">${r.ball.emoji}</div>
+      <div class="cmp-name">${r.ball.name}</div>
+      <div class="cmp-bar-wrap"><div class="cmp-bar" data-width="${max>0 ? (r.count/max*100) : 0}"></div></div>
+      <div class="cmp-count">${fmtInt(r.count)}</div>
+    </div>
+  `).join('');
+  goTo('compareballs');
+  setTimeout(()=>{
+    document.querySelectorAll('#compareBallsList .cmp-bar').forEach(el=>{
+      el.style.width = el.getAttribute('data-width') + '%';
+    });
+  }, 50);
+}
+
+/* ======================= COMPARE CARS ======================= */
+function openCompareCars(){
+  if(!state.car || !state.ball) return;
+  document.getElementById('cmpCarsBallLabel').textContent = `Using: ${state.ball.emoji} ${state.ball.name} (⌀ ${state.ball.diameter} cm)`;
+  document.getElementById('cmpCarsResultWrap').style.display = 'none';
+  document.getElementById('carSearch2').value = '';
+  renderCarList('', 'carList2');
+  goTo('comparecars');
+}
+
+function selectSecondCar(carB){
+  const carA = state.car, ball = state.ball;
+  const countA = estimateCount(carA.trunk, ball);
+  const countB = estimateCount(carB.trunk, ball);
+  document.getElementById('cmpSlotA_name').textContent = `${carA.brand} ${carA.model}`;
+  document.getElementById('cmpSlotA_val').textContent = fmtInt(countA);
+  document.getElementById('cmpSlotA_vol').textContent = carA.trunk + ' L';
+  document.getElementById('cmpSlotB_name').textContent = `${carB.brand} ${carB.model}`;
+  document.getElementById('cmpSlotB_val').textContent = fmtInt(countB);
+  document.getElementById('cmpSlotB_vol').textContent = carB.trunk + ' L';
+  document.getElementById('cmpCarsResultWrap').style.display = 'block';
+}
+
+document.getElementById('carSearch2').addEventListener('input', (e)=> renderCarList(e.target.value, 'carList2'));
+
+/* ======================= INIT ======================= */
+renderCarList('');
+renderBallGrid();
+</script>
+</body>
+</html>
